@@ -1,0 +1,16 @@
+# Fotos originais pesadas da câmera/celular — NÃO vão pro site
+# (as versões otimizadas já estão em assets/)
+IMG_*.jpg
+IMG_*.JPG
+IMG_*.jpeg
+IMG_*.png
+
+# Config local de ferramentas (Claude Code)
+.claude/
+
+# Lixo de sistema / temporários
+Thumbs.db
+.DS_Store
+desktop.ini
+*.tmp
+node_modules/
