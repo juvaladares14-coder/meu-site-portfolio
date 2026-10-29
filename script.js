@@ -9,11 +9,29 @@
 // WhatsApp da Júlia (55 + 86 + número)
 const WHATSAPP_NUMERO = '5586994622236';
 
-// Mensagem pré-preenchida ao abrir o WhatsApp
-const WHATSAPP_MENSAGEM = 'Olá Júlia! Vim pela landing page da Ju Valadares Media e gostaria de saber mais sobre seus planos.';
+// Mensagem padrão pré-preenchida ao abrir o WhatsApp.
+// Botões específicos podem sobrescrever com o atributo data-wa-msg no HTML.
+const WHATSAPP_MENSAGEM = 'Oi, Ju! Vim pelo site e gostaria de fazer um orçamento para um ensaio fotográfico.';
 
 // Instagram
 const INSTAGRAM_URL = 'https://www.instagram.com/juvaladares.media/';
+
+
+// Tags discretas por foto do portfólio (num do arquivo → categoria).
+// Mostram a versatilidade dos ensaios sem poluir. Fotos sem entrada
+// aqui simplesmente não recebem tag. Ju: ajuste livremente as categorias.
+const PORTFOLIO_TAGS = {
+  '01': 'Gestante',  '02': 'Casamento', '03': 'Gestante',  '04': 'Gestante',
+  '05': 'Gestante',  '06': 'Gestante',  '07': 'Casal',     '08': 'Casal',
+  '09': 'Casal',     '10': 'Casal',     '11': 'Casal',     '12': 'Casamento',
+  '13': 'Casamento', '14': 'Casamento', '15': 'Casamento', '16': 'Casal',
+  '17': 'Casal',     '18': 'Casal',     '19': 'Casal',     '21': 'Casal',
+  '22': 'Família',   '23': 'Detalhes',  '24': 'Casamento', '25': 'Casal',
+  '27': 'Casal',     '29': 'Retrato',   '30': 'Família',   '31': 'Casamento',
+  '32': 'Casamento', '33': 'Casamento', '34': 'Batizado',  '35': 'Detalhes',
+  '36': 'Gestante',  '37': 'Casamento', '38': 'Casal',     '39': 'Casal',
+  '40': 'Retrato',   '41': 'Retrato'
+};
 
 
 // Sequência das fotos do portfólio, exatamente na ordem em que
@@ -25,13 +43,12 @@ const PORTFOLIO_NUMS = [
   '33','34','35','36','37','38','39','40','41'
 ];
 
-// Fotos usadas no slideshow do hero — seleciono as primeiras
-// 10 do portfolio para um vídeo curto e impactante.
-const HERO_SLIDESHOW_NUMS = ['01','03','08','11','15','19','22','29','31','35'];
+// Carrossel da primeira dobra. A foto da Júlia (dobra.jpeg) já está no
+// HTML e é sempre a primeira; estas entram na sequência depois dela.
+const HERO_SLIDESHOW_NUMS = ['02','07','22','31','12','38'];
 
-// Tempo de cada slide em tela (ms). Mudar aqui se quiser mais
-// ou menos tempo. O CSS lê este valor via var --slideshow-duration.
-const HERO_SLIDE_DURATION = 4500;
+// Tempo de cada foto em tela (ms).
+const HERO_SLIDE_DURATION = 5000;
 
 
 // Mosaico de destaques (logo abaixo de "Cada etapa pensada..."). Cada célula
@@ -71,9 +88,11 @@ const MOSAIC = [
    1. CTAs: WhatsApp + Instagram
    --------------------------------------------------------- */
 function setupCtas() {
-  const waUrl = `https://wa.me/${WHATSAPP_NUMERO}?text=${encodeURIComponent(WHATSAPP_MENSAGEM)}`;
-
   document.querySelectorAll('[data-cta-whatsapp]').forEach((el) => {
+    // Cada botão pode ter uma mensagem própria via data-wa-msg;
+    // sem isso, cai na mensagem padrão de orçamento.
+    const msg = el.getAttribute('data-wa-msg') || WHATSAPP_MENSAGEM;
+    const waUrl = `https://wa.me/${WHATSAPP_NUMERO}?text=${encodeURIComponent(msg)}`;
     el.setAttribute('href', waUrl);
     el.setAttribute('target', '_blank');
     el.setAttribute('rel', 'noopener noreferrer');
@@ -159,47 +178,39 @@ function setupFloatingCta() {
 
 
 /* ---------------------------------------------------------
-   5. Hero slideshow (Ken Burns + crossfade automático)
+   5. Carrossel da primeira dobra (crossfade + Ken Burns)
+   As fotos passam dentro da mesma moldura de sempre. A primeira
+   já vem no HTML, então a dobra nunca aparece vazia.
    --------------------------------------------------------- */
 function setupHeroSlideshow() {
-  const root = document.getElementById('hero-slideshow');
+  const root = document.getElementById('hero-photo');
   if (!root) return;
 
-  // Repassa a duração ao CSS para a barra de progresso bater
-  root.style.setProperty('--slideshow-duration', HERO_SLIDE_DURATION + 'ms');
+  const tag = root.querySelector('.hero-photo-tag');
 
-  // Cria slides e a barra de progresso
-  HERO_SLIDESHOW_NUMS.forEach((num, idx) => {
+  HERO_SLIDESHOW_NUMS.forEach((num) => {
     const img = document.createElement('img');
     img.className = 'hero-slide';
     img.src = `assets/port${num}.webp`;
     img.alt = '';
     img.setAttribute('aria-hidden', 'true');
-    img.loading = idx === 0 ? 'eager' : 'lazy';
+    img.loading = 'lazy';
     img.decoding = 'async';
-    if (idx === 0) img.classList.add('is-active');
-    root.appendChild(img);
+    // Entram antes da tag para a legenda continuar por cima das fotos
+    root.insertBefore(img, tag);
   });
-
-  const progress = document.createElement('div');
-  progress.className = 'hero-slideshow-progress';
-  root.appendChild(progress);
 
   const slides = Array.from(root.querySelectorAll('.hero-slide'));
   if (slides.length <= 1) return;
 
+  // Respeita quem prefere menos movimento: fica só na primeira foto
+  if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
   let current = 0;
   setInterval(() => {
-    const prev = slides[current];
+    slides[current].classList.remove('is-active');
     current = (current + 1) % slides.length;
-    const next = slides[current];
-
-    prev.classList.remove('is-active');
-    prev.classList.add('is-prev');
-    next.classList.add('is-active');
-
-    // Limpa a classe de transição do anterior após a animação
-    setTimeout(() => prev.classList.remove('is-prev'), 1300);
+    slides[current].classList.add('is-active');
   }, HERO_SLIDE_DURATION);
 }
 
@@ -222,6 +233,16 @@ function setupCarousel() {
     img.loading = idx < 3 ? 'eager' : 'lazy';
     img.decoding = 'async';
     fig.appendChild(img);
+
+    // Tag discreta de categoria (se houver mapeamento para esta foto)
+    const tag = PORTFOLIO_TAGS[num];
+    if (tag) {
+      const cap = document.createElement('figcaption');
+      cap.className = 'carousel-tag';
+      cap.textContent = tag;
+      fig.appendChild(cap);
+    }
+
     track.appendChild(fig);
   });
 
@@ -250,11 +271,12 @@ function setupCarousel() {
 
   // Quantos cards estão visíveis no momento (determina o "passo" da seta)
   const cardsVisible = () => {
-    if (window.innerWidth >= 900) return 3;
+    if (window.innerWidth >= 1200) return 5;
+    if (window.innerWidth >= 900) return 4;
     if (window.innerWidth >= 640) return 2;
     return 1;
   };
-  // Setas avançam UMA "página" cheia (3 cards no desktop)
+  // Setas avançam UMA "página" cheia (4 ou 5 cards no desktop)
   const scrollByPage = (dir) => {
     const w = slides[0].getBoundingClientRect().width + 16;
     track.scrollBy({ left: dir * w * cardsVisible(), behavior: 'smooth' });
@@ -357,10 +379,10 @@ function setupFaq() {
    --------------------------------------------------------- */
 function setupAuthorityCounters() {
   const nums = document.querySelectorAll('[data-count-to]');
-  const dezenas = document.querySelector('.auth-num-text');
 
   const animateNumber = (el) => {
     const target = Number(el.dataset.countTo);
+    const prefix = el.dataset.countPrefix || '';
     const suffix = el.dataset.countSuffix || '';
     const duration = 1600;
     const startedAt = performance.now();
@@ -368,32 +390,10 @@ function setupAuthorityCounters() {
       const elapsed = now - startedAt;
       const progress = Math.min(1, elapsed / duration);
       const eased = 1 - Math.pow(1 - progress, 3);
-      el.textContent = Math.round(target * eased) + suffix;
+      el.textContent = prefix + Math.round(target * eased) + suffix;
       if (progress < 1) requestAnimationFrame(tick);
     };
     requestAnimationFrame(tick);
-  };
-
-  const animateDezenas = (el) => {
-    const sequence = [1, 5, 12, 25, 40];
-    const finalText = el.textContent.trim() || 'Dezenas';
-    let i = 0;
-    el.textContent = '0';
-    el.style.transition = 'opacity .3s ease, font-style .3s ease';
-    const step = () => {
-      if (i < sequence.length) {
-        el.textContent = sequence[i];
-        i++;
-        setTimeout(step, 320);
-      } else {
-        el.style.opacity = '0';
-        setTimeout(() => {
-          el.textContent = finalText;
-          el.style.opacity = '1';
-        }, 280);
-      }
-    };
-    setTimeout(step, 200);
   };
 
   if (nums.length) {
@@ -407,53 +407,22 @@ function setupAuthorityCounters() {
     );
     nums.forEach((el) => io.observe(el));
   }
-
-  if (dezenas) {
-    const ioD = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) { animateDezenas(entry.target); ioD.unobserve(entry.target); }
-        });
-      },
-      { threshold: 0.4 }
-    );
-    ioD.observe(dezenas);
-  }
 }
 
 
 /* ---------------------------------------------------------
-   Cascade entrance dos 4 cards de Medos
+   8. Pop-up estratégico
+   Um único gatilho: quando a pessoa passa de POPUP_SCROLL_PCT da
+   página. Não abre na chegada e não volta a aparecer na mesma visita.
    --------------------------------------------------------- */
-function setupMedosCascade() {
-  const grid = document.querySelector('.medos-grid');
-  if (!grid) return;
-  const io = new IntersectionObserver(
-    (entries) => {
-      entries.forEach((entry) => {
-        if (entry.isIntersecting) {
-          grid.classList.add('is-in-view');
-          io.unobserve(grid);
-        }
-      });
-    },
-    { threshold: 0.18 }
-  );
-  io.observe(grid);
-}
+const POPUP_SCROLL_PCT = 45;
 
-
-/* ---------------------------------------------------------
-   8. Modal popup na dobra Medos
-   Aparece automaticamente ao entrar na seção (uma vez por sessão).
-   --------------------------------------------------------- */
-function setupMedosModal() {
-  const modal = document.getElementById('medos-modal');
-  const medosSection = document.getElementById('medos');
-  if (!modal || !medosSection) return;
+function setupCtaModal() {
+  const modal = document.getElementById('cta-modal');
+  if (!modal) return;
 
   const closeBtn = modal.querySelector('.modal-close');
-  const SESSION_KEY = 'jvm_medos_modal_seen';
+  const SESSION_KEY = 'jvm_cta_modal_seen';
 
   const openModal = () => {
     modal.classList.add('is-open');
@@ -482,20 +451,17 @@ function setupMedosModal() {
   // Só abre uma vez por sessão (não fica chato)
   if (sessionStorage.getItem(SESSION_KEY) === '1') return;
 
-  // Abre quando o usuário rola até ~30% da seção de medos
-  const io = new IntersectionObserver(
-    (entries) => {
-      entries.forEach((entry) => {
-        if (entry.isIntersecting) {
-          sessionStorage.setItem(SESSION_KEY, '1');
-          setTimeout(openModal, 600); // pequeno delay para não ser invasivo
-          io.disconnect();
-        }
-      });
-    },
-    { threshold: 0.3 }
-  );
-  io.observe(medosSection);
+  const onScroll = () => {
+    const rolado = window.scrollY || document.documentElement.scrollTop;
+    const total = document.documentElement.scrollHeight - window.innerHeight;
+    if (total <= 0) return;
+    if ((rolado / total) * 100 < POPUP_SCROLL_PCT) return;
+
+    window.removeEventListener('scroll', onScroll);
+    sessionStorage.setItem(SESSION_KEY, '1');
+    setTimeout(openModal, 400); // pequeno respiro para não ser invasivo
+  };
+  window.addEventListener('scroll', onScroll, { passive: true });
 }
 
 
@@ -513,14 +479,14 @@ function setupFooterYear() {
    --------------------------------------------------------- */
 document.addEventListener('DOMContentLoaded', () => {
   setupCtas();
+  setupHeroSlideshow();
   setupCarousel();
   setupMosaic();
   setupFaq();
   setupReveal();
   setupProgressBar();
   setupAuthorityCounters();
-  setupMedosCascade();
   setupFloatingCta();
-  setupMedosModal();
+  setupCtaModal();
   setupFooterYear();
 });
